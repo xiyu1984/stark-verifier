@@ -2,10 +2,7 @@ use std::ops::Range;
 
 use crate::plonky2_verifier::context::RegionCtx;
 use halo2_proofs::{halo2curves::ff::PrimeField, plonk::Error};
-use plonky2::{
-    field::{goldilocks_field::GoldilocksField, types::Field},
-    hash::hashing::SPONGE_WIDTH,
-};
+use plonky2::{field::{goldilocks_field::GoldilocksField, types::Field}, hash::poseidon::SPONGE_WIDTH};
 
 use crate::plonky2_verifier::{
     chip::{

@@ -6,8 +6,8 @@ use plonky2::{
     fri::{reduction_strategies::FriReductionStrategy, FriConfig},
     hash::{
         hash_types::HashOut,
-        hashing::{compress, hash_n_to_hash_no_pad, PlonkyPermutation, SPONGE_WIDTH},
-        poseidon::PoseidonHash,
+        hashing::{compress, hash_n_to_hash_no_pad, PlonkyPermutation},
+        poseidon::{PoseidonHash, SPONGE_RATE, SPONGE_WIDTH},
     },
     plonk::{
         circuit_data::CircuitConfig,
@@ -20,7 +20,7 @@ use super::{
     native::{decode_fe, encode_fe, permute_bn254_poseidon_native},
 };
 
-#[derive(Copy, Clone, Default, Debug, PartialEq)]
+#[derive(Copy, Clone, Default, Debug, Eq, PartialEq)]
 pub struct Bn254PoseidonPermutation {
     state: [GoldilocksField; SPONGE_WIDTH],
 }
@@ -35,9 +35,18 @@ trait Permuter: Sized {
     fn permute(input: [Self; SPONGE_WIDTH]) -> [Self; SPONGE_WIDTH];
 }
 
+impl AsRef<[GoldilocksField]> for Bn254PoseidonPermutation {
+    fn as_ref(&self) -> &[GoldilocksField] {
+        &self.state
+    }
+}
+
 impl PlonkyPermutation<GoldilocksField> for Bn254PoseidonPermutation {
-    fn permute(input: [GoldilocksField; SPONGE_WIDTH]) -> [GoldilocksField; SPONGE_WIDTH] {
-        let mut encoded_state = input
+    const RATE: usize = SPONGE_RATE;
+    const WIDTH: usize = SPONGE_WIDTH;
+
+    fn permute(&mut self) {
+        let mut encoded_state = self.state
             .chunks(3)
             .map(|x| encode_fe(x.try_into().unwrap()))
             .collect::<Vec<_>>();
@@ -46,7 +55,35 @@ impl PlonkyPermutation<GoldilocksField> for Bn254PoseidonPermutation {
         permute_bn254_poseidon_native(&mut state);
         let decoded_state =
             state.iter().flat_map(|x| decode_fe(*x)).collect::<Vec<_>>()[0..SPONGE_WIDTH].to_vec();
-        decoded_state.try_into().unwrap()
+        self.state = decoded_state.try_into().unwrap();
+    }
+    
+    fn new<I: IntoIterator<Item = GoldilocksField>>(elts: I) -> Self {
+        let mut perm = Self {
+            state: [GoldilocksField::default(); SPONGE_WIDTH],
+        };
+        perm.set_from_iter(elts, 0);
+        perm
+    }
+
+    fn set_elt(&mut self, elt: GoldilocksField, idx: usize) {
+        self.state[idx] = elt;
+    }
+
+    fn set_from_slice(&mut self, elts: &[GoldilocksField], start_idx: usize) {
+        let begin = start_idx;
+        let end = start_idx + elts.len();
+        self.state[begin..end].copy_from_slice(elts);
+    }
+
+    fn set_from_iter<I: IntoIterator<Item = GoldilocksField>>(&mut self, elts: I, start_idx: usize) {
+        for (s, e) in self.state[start_idx..].iter_mut().zip(elts) {
+            *s = e;
+        }
+    }
+
+    fn squeeze(&self) -> &[GoldilocksField] {
+        &self.state[..Self::RATE]
     }
 }
 

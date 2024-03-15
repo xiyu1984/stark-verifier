@@ -1,13 +1,12 @@
 use halo2_proofs::{halo2curves::ff::PrimeField, plonk::Error};
 use halo2wrong_maingate::AssignedValue;
-use plonky2::{
-    field::{goldilocks_field::GoldilocksField, types::Field},
-    hash::hashing::SPONGE_WIDTH,
-};
+use plonky2::field::{goldilocks_field::GoldilocksField, types::Field};
 
 use crate::plonky2_verifier::context::RegionCtx;
 
 use super::goldilocks_chip::{GoldilocksChip, GoldilocksChipConfig};
+
+use plonky2::hash::poseidon::SPONGE_WIDTH;
 
 const RATE: usize = 8;
 
@@ -262,12 +261,14 @@ mod tests {
     #[test]
     fn test_hasher_chip_mock() {
         let input = [(); 12].map(|_| GoldilocksField::rand());
-        let expected_output = Bn254PoseidonPermutation::permute(input);
+
+        let mut bn254_pp = Bn254PoseidonPermutation::new(input);
+        bn254_pp.permute();
 
         const DEGREE: u32 = 17;
         let circuit = TestCircuit {
             input,
-            expected_output: expected_output.to_vec().try_into().unwrap(),
+            expected_output: bn254_pp.as_ref().to_vec().try_into().unwrap(),
         };
         let instance: Vec<Fr> = vec![];
         let mock_prover = MockProver::run(DEGREE, &circuit, vec![instance.clone()]).unwrap();

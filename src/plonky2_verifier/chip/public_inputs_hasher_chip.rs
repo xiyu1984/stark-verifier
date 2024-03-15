@@ -1,9 +1,6 @@
 use halo2_proofs::{halo2curves::ff::PrimeField, plonk::Error};
 use halo2wrong_maingate::{AssignedValue, Term};
-use plonky2::{
-    field::{goldilocks_field::GoldilocksField, types::Field},
-    hash::hashing::SPONGE_WIDTH,
-};
+use plonky2::{field::{goldilocks_field::GoldilocksField, types::Field}, hash::poseidon::SPONGE_WIDTH};
 
 use crate::plonky2_verifier::context::RegionCtx;
 

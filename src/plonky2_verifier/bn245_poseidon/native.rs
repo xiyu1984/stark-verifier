@@ -2,7 +2,7 @@ use halo2_proofs::{arithmetic::Field, halo2curves::bn256::Fr};
 use halo2wrong_maingate::fe_to_big;
 use plonky2::field::{
     goldilocks_field::GoldilocksField,
-    types::{Field64, PrimeField64},
+    types::PrimeField64,
 };
 
 use crate::plonky2_verifier::chip::native_chip::{
@@ -70,7 +70,7 @@ pub fn decode_fe(x: Fr) -> [GoldilocksField; 3] {
     let decomposed = goldilocks_decompose(x).map(|x| {
         let mut digits = fe_to_big(x).to_u64_digits();
         digits.resize(1, 0);
-        GoldilocksField::from_noncanonical_u64(digits[0])
+        <GoldilocksField as plonky2::field::types::Field>::from_noncanonical_u64(digits[0])
     })[0..3]
         .to_vec();
     decomposed.try_into().unwrap()

@@ -17,6 +17,7 @@ use halo2_solidity_verifier::encode_calldata;
 use halo2_solidity_verifier::BatchOpenScheme::Bdfg21;
 use halo2_solidity_verifier::Evm;
 use halo2_solidity_verifier::SolidityGenerator;
+use log::info;
 use plonky2::field::goldilocks_field::GoldilocksField;
 
 fn report_elapsed(now: Instant) {
@@ -71,7 +72,7 @@ pub fn verify_inside_snark(
     let circuit = Verifier::new(proof, instances.clone(), vk, common_data);
     let mock_prover = MockProver::run(degree, &circuit, vec![instances.clone()]).unwrap();
     mock_prover.assert_satisfied();
-    println!("{}", "Mock prover passes".white().bold());
+    info!("{}", "Mock prover passes".white().bold());
     // generates halo2 solidity verifier
     let mut rng = rand::thread_rng();
     let param = ParamsKZG::<Bn256>::setup(degree, &mut rng);
@@ -85,18 +86,20 @@ pub fn verify_inside_snark(
     let vk_creation_code = compile_solidity(&vk_solidity);
     let vk_address = evm.create(vk_creation_code);
     // generates SNARK proof and runs EVM verifier
-    println!("{}", "Starting finalization phase".red().bold());
+    info!("{}", "Starting finalization phase".red().bold());
     let now = Instant::now();
     let proof = create_proof_checked(&param, &pk, circuit.clone(), &instances, &mut rng);
-    println!("{}", "SNARK proof generated successfully!".white().bold());
+    info!("{}", "SNARK proof generated successfully!".white().bold());
     report_elapsed(now);
     let calldata = encode_calldata(Some(vk_address.into()), &proof, &instances);
     let (gas_cost, _output) = evm.call(verifier_address, calldata);
-    println!("Gas cost: {}", gas_cost);
+    info!("Gas cost: {}", gas_cost);
 }
 
 #[cfg(test)]
 mod tests {
+    use log::{info, LevelFilter};
+
     use super::{verify_inside_snark, verify_inside_snark_mock};
     use crate::plonky2_verifier::{
         bn245_poseidon::plonky2_config::{
@@ -121,7 +124,7 @@ mod tests {
     fn generate_proof_tuple() -> ProofTuple<F, Bn254PoseidonGoldilocksConfig, D> {
         let (inner_target, inner_data) = {
             let hash_const =
-                hash_n_to_hash_no_pad::<F, PoseidonPermutation>(&[F::from_canonical_u64(42)]);
+                hash_n_to_hash_no_pad::<F, PoseidonPermutation<F>>(&[F::from_canonical_u64(42)]);
             let mut builder = CircuitBuilder::<F, D>::new(standard_inner_stark_verifier_config());
             let target = builder.add_virtual_target();
             let expected_hash = builder.constant_hash(hash_const);
@@ -134,7 +137,7 @@ mod tests {
 
         let mut builder = CircuitBuilder::<F, D>::new(standard_stark_verifier_config());
         let proof_t =
-            builder.add_virtual_proof_with_pis::<PoseidonGoldilocksConfig>(&inner_data.common);
+            builder.add_virtual_proof_with_pis(&inner_data.common);
         let vd = builder.constant_verifier_data(&inner_data.verifier_only);
         builder.verify_proof::<PoseidonGoldilocksConfig>(&proof_t, &vd, &inner_data.common);
         builder.register_public_inputs(&proof_t.public_inputs);
@@ -162,7 +165,15 @@ mod tests {
 
     #[test]
     fn test_recursive_halo2_proof() {
+        let mut log_builder = env_logger::Builder::from_default_env();
+        log_builder.format_timestamp(None);
+        log_builder.filter_level(LevelFilter::Info);
+        let _ = log_builder.try_init();
+
+        info!("generate proof tuple");
         let proof = generate_proof_tuple();
+
+        info!("start verify in snark");
         verify_inside_snark(19, proof);
     }
 }

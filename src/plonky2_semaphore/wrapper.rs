@@ -34,7 +34,7 @@ where
 {
     pub fn new(config: CircuitConfig, inner_circuit: &VerifierCircuitData<F, InnerC, D>) -> Self {
         let mut builder = CircuitBuilder::new(config);
-        let inner_proof = builder.add_virtual_proof_with_pis::<InnerC>(&inner_circuit.common);
+        let inner_proof = builder.add_virtual_proof_with_pis(&inner_circuit.common);
         let vd_target = builder.constant_verifier_data(&inner_circuit.verifier_only);
         builder.verify_proof::<InnerC>(&inner_proof, &vd_target, &inner_circuit.common);
         builder.register_public_inputs(&inner_proof.public_inputs);
