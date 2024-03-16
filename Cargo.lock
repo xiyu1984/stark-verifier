@@ -1195,6 +1195,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "plonky2_u32"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "itertools 0.10.5",
+ "num",
+ "plonky2",
+]
+
+[[package]]
 name = "plonky2_util"
 version = "0.2.0"
 
@@ -1536,6 +1546,7 @@ dependencies = [
  "num-integer",
  "num-traits",
  "plonky2",
+ "plonky2_u32",
  "rand",
  "rayon",
  "serde",

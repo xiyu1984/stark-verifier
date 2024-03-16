@@ -14,6 +14,7 @@ use plonky2::{
         config::{GenericConfig, Hasher},
     },
 };
+use serde::{Deserialize, Serialize};
 
 use super::{
     constants::T_BN254_POSEIDON,
@@ -31,9 +32,9 @@ impl Bn254PoseidonPermutation {
     }
 }
 
-trait Permuter: Sized {
-    fn permute(input: [Self; SPONGE_WIDTH]) -> [Self; SPONGE_WIDTH];
-}
+// trait Permuter: Sized {
+//     fn permute(input: [Self; SPONGE_WIDTH]) -> [Self; SPONGE_WIDTH];
+// }
 
 impl AsRef<[GoldilocksField]> for Bn254PoseidonPermutation {
     fn as_ref(&self) -> &[GoldilocksField] {
@@ -102,7 +103,7 @@ impl Hasher<GoldilocksField> for Bn254PoseidonHash {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Bn254PoseidonGoldilocksConfig;
 impl GenericConfig<2> for Bn254PoseidonGoldilocksConfig {
     type F = GoldilocksField;
