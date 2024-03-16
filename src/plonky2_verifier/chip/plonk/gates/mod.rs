@@ -8,12 +8,16 @@ use plonky2::{field::goldilocks_field::GoldilocksField, gates::gate::GateRef};
 
 use self::arithmetic_extension::ArithmeticExtensionGateConstrainer;
 use self::base_sum::BaseSumGateConstrainer;
+use self::comparison_gate::ComparisonGateContainer;
+use self::coset_interpolation_gate::CosetInterpolationGateConstrainer;
 use self::multiplication_extension::MulExtensionGateConstrainer;
 use self::poseidon::PoseidonGateConstrainer;
 use self::poseidon_mds::PoseidonMDSGateConstrainer;
 use self::random_access::RandomAccessGateConstrainer;
 use self::reducing::ReducingGateConstrainer;
 use self::reducing_extension::ReducingExtensionGateConstrainer;
+use self::u32_add_many::U32AddManyGateConstrainer;
+use self::u32_arithmetic::U32ArithmeticGateConstrainer;
 use self::{
     arithmetic::ArithmeticGateConstrainer, constant::ConstantGateConstrainer,
     noop::NoopGateConstrainer, public_input::PublicInputGateConstrainer,
@@ -32,7 +36,9 @@ const UNUSED_SELECTOR: usize = u32::MAX as usize;
 pub mod arithmetic;
 pub mod arithmetic_extension;
 pub mod base_sum;
+pub mod comparison_gate;
 pub mod constant;
+pub mod coset_interpolation_gate;
 pub mod multiplication_extension;
 pub mod noop;
 pub mod poseidon;
@@ -41,6 +47,8 @@ pub mod public_input;
 pub mod random_access;
 pub mod reducing;
 pub mod reducing_extension;
+pub mod u32_add_many;
+pub mod u32_arithmetic;
 
 pub mod gate_test;
 
@@ -194,6 +202,100 @@ impl<F: PrimeField> From<&GateRef<GoldilocksField, 2>> for CustomGateRef<F> {
                     num_limbs: 4
                 }))
             },
+            "PoseidonMdsGate(PhantomData)<WIDTH=12>" => {
+                Self(Box::new(PoseidonMDSGateConstrainer))
+            },
+            "PoseidonGate(PhantomData)<WIDTH=12>" => {
+                Self(Box::new(PoseidonGateConstrainer))
+            },
+            "RandomAccessGate { bits: 1, num_copies: 20, num_extra_constants: 0, _phantom: PhantomData }<D=2>" => {
+                Self(Box::new(RandomAccessGateConstrainer {
+                    bits: 1,
+                    num_copies: 20,
+                    num_extra_constants: 0,
+                }))
+            },
+            "RandomAccessGate { bits: 4, num_copies: 4, num_extra_constants: 2, _phantom: PhantomData }<D=2>" => {
+                Self(Box::new(RandomAccessGateConstrainer {
+                    bits: 4,
+                    num_copies: 4,
+                    num_extra_constants: 2,
+                }))
+            },
+            "BaseSumGate { num_limbs: 32 } + Base: 2" => {
+                Self(Box::new(BaseSumGateConstrainer {
+                    num_limbs: 32
+                }))
+            },
+            "ComparisonGate { num_bits: 32, num_chunks: 16, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>" => {
+                Self(Box::new(ComparisonGateContainer {
+                    num_bits: 32,
+                    num_chunks: 16,
+                }))
+            },
+            "ComparisonGate { num_bits: 10, num_chunks: 5, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>" => {
+                Self(Box::new(ComparisonGateContainer {
+                    num_bits: 10,
+                    num_chunks: 5,
+                }))
+            }
+            "U32AddManyGate { num_addends: 2, num_ops: 5, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }" => {
+                Self(Box::new(U32AddManyGateConstrainer {
+                    num_addends: 2,
+                    num_ops: 5,
+                }))
+            },
+            "U32AddManyGate { num_addends: 3, num_ops: 5, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }" => {
+                Self(Box::new(U32AddManyGateConstrainer {
+                    num_addends: 3,
+                    num_ops: 5,
+                }))
+            },
+            "U32ArithmeticGate { num_ops: 3, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }" => {
+                Self(Box::new(U32ArithmeticGateConstrainer {
+                    num_ops: 3,
+                }))
+            },
+            "CosetInterpolationGate { subgroup_bits: 4, degree: 6, barycentric_weights: [17293822565076172801, 18374686475376656385, 18446744069413535745, 281474976645120, 17592186044416, 256, 18446744000695107601, 18446744065119617025, 1152921504338411520, 72057594037927936, 1048576, 18446462594437939201, 18446726477228539905, 18446744069414584065, 68719476720, 4294967296], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>" => {
+                Self(Box::new(CosetInterpolationGateConstrainer {
+                    subgroup_bits: 4,
+                    degree: 6,
+                    barycentric_weights: vec![
+                        GoldilocksField::from_canonical_u64(17293822565076172801),
+                        GoldilocksField::from_canonical_u64(18374686475376656385),
+                        GoldilocksField::from_canonical_u64(18446744069413535745),
+                        GoldilocksField::from_canonical_u64(281474976645120),
+                        GoldilocksField::from_canonical_u64(17592186044416),
+                        GoldilocksField::from_canonical_u64(256),
+                        GoldilocksField::from_canonical_u64(18446744000695107601),
+                        GoldilocksField::from_canonical_u64(18446744065119617025),
+                        GoldilocksField::from_canonical_u64(1152921504338411520),
+                        GoldilocksField::from_canonical_u64(72057594037927936),
+                        GoldilocksField::from_canonical_u64(1048576),
+                        GoldilocksField::from_canonical_u64(18446462594437939201),
+                        GoldilocksField::from_canonical_u64(18446726477228539905),
+                        GoldilocksField::from_canonical_u64(18446744069414584065),
+                        GoldilocksField::from_canonical_u64(68719476720),
+                        GoldilocksField::from_canonical_u64(4294967296),
+                    ],
+                }))
+            },
+            "CosetInterpolationGate { subgroup_bits: 1, degree: 2, barycentric_weights: [9223372034707292161, 9223372034707292160], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>" => {
+                Self(Box::new(CosetInterpolationGateConstrainer {
+                    subgroup_bits: 1,
+                    degree: 2,
+                    barycentric_weights: vec![
+                        GoldilocksField::from_canonical_u64(9223372034707292161),
+                        GoldilocksField::from_canonical_u64(9223372034707292160)
+                    ],
+                }))
+            },
+            "U32AddManyGate { num_addends: 4, num_ops: 5, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }" => {
+                Self(Box::new(U32AddManyGateConstrainer {
+                    num_addends: 4,
+                    num_ops: 5,
+                }))
+            }
             s => {
                 println!("{s}");
                 unimplemented!()
