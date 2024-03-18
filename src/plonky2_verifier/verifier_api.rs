@@ -89,7 +89,7 @@ pub fn verify_inside_snark(
     info!("{}", "Starting finalization phase".red().bold());
     let now = Instant::now();
     let proof = create_proof_checked(&param, &pk, circuit.clone(), &instances, &mut rng);
-    info!("{}", "SNARK proof generated successfully!".white().bold());
+    info!("{}", "SNARK proof generated successfully!".green().bold());
     report_elapsed(now);
     let calldata = encode_calldata(Some(vk_address.into()), &proof, &instances);
     let (gas_cost, _output) = evm.call(verifier_address, calldata);
