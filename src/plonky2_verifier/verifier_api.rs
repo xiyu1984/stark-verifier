@@ -89,7 +89,7 @@ pub fn verify_inside_snark(
     // generates SNARK proof and runs EVM verifier
     info!("{}", "Starting finalization phase".blue().bold());
     let now = Instant::now();
-    // todo()!: in production, the `rng` needs to be changed
+    // add blindness
     let proof = create_proof_checked(kzg_param, &pk, circuit.clone(), &instances, &mut rng);
     info!("{}", "SNARK proof generated successfully!".green().bold());
     report_elapsed(now);
@@ -135,7 +135,7 @@ pub fn verify_inside_snark_2(
     // generates SNARK proof and runs EVM verifier
     info!("{}", "Starting finalization phase".blue().bold());
     let now = Instant::now();
-    // todo()!: in production, the `rng` needs to be changed
+    // add blindness
     let mut rng = rand::thread_rng();
     let proof = create_proof_checked(kzg_param, &pk, circuit.clone(), &instances, &mut rng);
     info!("{}", "SNARK proof generated successfully!".green().bold());
