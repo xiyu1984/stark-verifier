@@ -72,13 +72,14 @@ pub fn verify_inside_snark(
     let circuit = Verifier::new(proof, instances.clone(), vk, common_data);
     let mock_prover = MockProver::run(degree, &circuit, vec![instances.clone()]).unwrap();
     mock_prover.assert_satisfied();
-    info!("{}", "Mock prover passes".white().bold());
+    info!("{}", "Mock prover passes".green().bold());
     // generates halo2 solidity verifier
     let mut rng = rand::thread_rng();
     let param = ParamsKZG::<Bn256>::setup(degree, &mut rng);
-    let vk = keygen_vk(&param, &circuit).unwrap();
-    let pk = keygen_pk(&param, vk.clone(), &circuit).unwrap();
-    let generator = SolidityGenerator::new(&param, &vk, Bdfg21, instances.len());
+    let kzg_param:&ParamsKZG<Bn256> = &param;
+    let vk = keygen_vk(kzg_param, &circuit).unwrap();
+    let pk = keygen_pk(kzg_param, vk.clone(), &circuit).unwrap();
+    let generator = SolidityGenerator::new(kzg_param, &vk, Bdfg21, instances.len());
     let (verifier_solidity, vk_solidity) = generator.render_separately().unwrap();
     let mut evm = Evm::default();
     let verifier_creation_code = compile_solidity(&verifier_solidity);
@@ -88,7 +89,55 @@ pub fn verify_inside_snark(
     // generates SNARK proof and runs EVM verifier
     info!("{}", "Starting finalization phase".blue().bold());
     let now = Instant::now();
-    let proof = create_proof_checked(&param, &pk, circuit.clone(), &instances, &mut rng);
+    // todo()!: in production, the `rng` needs to be changed
+    let proof = create_proof_checked(kzg_param, &pk, circuit.clone(), &instances, &mut rng);
+    info!("{}", "SNARK proof generated successfully!".green().bold());
+    report_elapsed(now);
+    let calldata = encode_calldata(Some(vk_address.into()), &proof, &instances);
+    let (gas_cost, _output) = evm.call(verifier_address, calldata);
+    info!("{}", format!("Gas cost: {}", gas_cost).yellow().bold());
+
+    if let Some(save_path) = save {
+        // save verifier and vk as solidity smart contract
+        std_ops::save_solidity(format!("{}_verifier.sol", save_path), &verifier_solidity);
+        std_ops::save_solidity(format!("{}_vk.sol", save_path), &vk_solidity);
+    }
+}
+
+pub fn verify_inside_snark_2(
+    degree: u32,
+    proof: ProofTuple<GoldilocksField, Bn254PoseidonGoldilocksConfig, 2>, kzg_param: &ParamsKZG<Bn256>, save: Option<String>
+) {
+    let (proof_with_public_inputs, vd, cd) = proof;
+    let proof = ProofValues::<Fr, 2>::from(proof_with_public_inputs.proof);
+    let instances = proof_with_public_inputs
+        .public_inputs
+        .iter()
+        .map(|e| goldilocks_to_fe(*e))
+        .collect::<Vec<Fr>>();
+    let vk = VerificationKeyValues::from(vd.clone());
+    let common_data = CommonData::from(cd);
+    // runs mock prover
+    let circuit = Verifier::new(proof, instances.clone(), vk, common_data);
+    let mock_prover = MockProver::run(degree, &circuit, vec![instances.clone()]).unwrap();
+    mock_prover.assert_satisfied();
+    info!("{}", "Mock prover passes".green().bold());
+    // generates halo2 solidity verifier
+    let vk = keygen_vk(kzg_param, &circuit).unwrap();
+    let pk = keygen_pk(kzg_param, vk.clone(), &circuit).unwrap();
+    let generator = SolidityGenerator::new(kzg_param, &vk, Bdfg21, instances.len());
+    let (verifier_solidity, vk_solidity) = generator.render_separately().unwrap();
+    let mut evm = Evm::default();
+    let verifier_creation_code = compile_solidity(&verifier_solidity);
+    let verifier_address = evm.create(verifier_creation_code);
+    let vk_creation_code = compile_solidity(&vk_solidity);
+    let vk_address = evm.create(vk_creation_code);
+    // generates SNARK proof and runs EVM verifier
+    info!("{}", "Starting finalization phase".blue().bold());
+    let now = Instant::now();
+    // todo()!: in production, the `rng` needs to be changed
+    let mut rng = rand::thread_rng();
+    let proof = create_proof_checked(kzg_param, &pk, circuit.clone(), &instances, &mut rng);
     info!("{}", "SNARK proof generated successfully!".green().bold());
     report_elapsed(now);
     let calldata = encode_calldata(Some(vk_address.into()), &proof, &instances);
