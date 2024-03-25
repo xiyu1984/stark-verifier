@@ -54,6 +54,7 @@ impl AccessSet {
                 wrapper_circuit.data.verifier_only.clone(),
                 wrapper_circuit.data.common.clone(),
             ),
+            None
         );
         Ok(())
     }

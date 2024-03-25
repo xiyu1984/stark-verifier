@@ -57,7 +57,7 @@ pub fn verify_inside_snark_mock(
 /// This runs real prover and generates valid SNARK proof, generates EVM verifier and runs the verifier
 pub fn verify_inside_snark(
     degree: u32,
-    proof: ProofTuple<GoldilocksField, Bn254PoseidonGoldilocksConfig, 2>,
+    proof: ProofTuple<GoldilocksField, Bn254PoseidonGoldilocksConfig, 2>, save: Option<String>
 ) {
     let (proof_with_public_inputs, vd, cd) = proof;
     let proof = ProofValues::<Fr, 2>::from(proof_with_public_inputs.proof);
@@ -86,14 +86,37 @@ pub fn verify_inside_snark(
     let vk_creation_code = compile_solidity(&vk_solidity);
     let vk_address = evm.create(vk_creation_code);
     // generates SNARK proof and runs EVM verifier
-    info!("{}", "Starting finalization phase".red().bold());
+    info!("{}", "Starting finalization phase".blue().bold());
     let now = Instant::now();
     let proof = create_proof_checked(&param, &pk, circuit.clone(), &instances, &mut rng);
     info!("{}", "SNARK proof generated successfully!".green().bold());
     report_elapsed(now);
     let calldata = encode_calldata(Some(vk_address.into()), &proof, &instances);
     let (gas_cost, _output) = evm.call(verifier_address, calldata);
-    info!("Gas cost: {}", gas_cost);
+    info!("{}", format!("Gas cost: {}", gas_cost).yellow().bold());
+
+    if let Some(save_path) = save {
+        // save verifier and vk as solidity smart contract
+        std_ops::save_solidity(format!("{}_verifier.sol", save_path), &verifier_solidity);
+        std_ops::save_solidity(format!("{}_vk.sol", save_path), &vk_solidity);
+    }
+}
+
+mod std_ops {
+    pub(crate) use std::{
+        fs::{create_dir_all, File},
+        io::Write
+    };
+
+    pub(crate) fn save_solidity(name: impl AsRef<str>, solidity: &str) {
+        const DIR_GENERATED: &str = "./generated-sc";
+    
+        create_dir_all(DIR_GENERATED).unwrap();
+        File::create(format!("{DIR_GENERATED}/{}", name.as_ref()))
+            .unwrap()
+            .write_all(solidity.as_bytes())
+            .unwrap();
+    }
 }
 
 #[cfg(test)]
@@ -174,6 +197,6 @@ mod tests {
         let proof = generate_proof_tuple();
 
         info!("start verify in snark");
-        verify_inside_snark(19, proof);
+        verify_inside_snark(19, proof, None);
     }
 }
