@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use anyhow::Result;
 use super::bn245_poseidon::plonky2_config::Bn254PoseidonGoldilocksConfig;
 use super::types::{
     common_data::CommonData, proof::ProofValues, verification_key::VerificationKeyValues,
@@ -104,7 +105,7 @@ pub fn verify_inside_snark(
     }
 }
 
-pub fn verify_inside_snark_2(
+pub fn verify_inside_snark_solidity(
     degree: u32,
     proof: ProofTuple<GoldilocksField, Bn254PoseidonGoldilocksConfig, 2>, kzg_param: &ParamsKZG<Bn256>, save: Option<String>
 ) {
@@ -151,20 +152,79 @@ pub fn verify_inside_snark_2(
     }
 }
 
-mod std_ops {
+pub fn verify_inside_snark_proof(
+    // degree: u32,
+    proof: ProofTuple<GoldilocksField, Bn254PoseidonGoldilocksConfig, 2>, kzg_param: &ParamsKZG<Bn256>, save: Option<String>
+) -> Result<Vec<u8>> {
+    let (proof_with_public_inputs, vd, cd) = proof;
+    let proof = ProofValues::<Fr, 2>::from(proof_with_public_inputs.proof);
+    let instances = proof_with_public_inputs
+        .public_inputs
+        .iter()
+        .map(|e| goldilocks_to_fe(*e))
+        .collect::<Vec<Fr>>();
+    let vk = VerificationKeyValues::from(vd.clone());
+    let common_data = CommonData::from(cd);
+    // runs mock prover
+    let circuit = Verifier::new(proof, instances.clone(), vk, common_data);
+    // let mock_prover = MockProver::run(degree, &circuit, vec![instances.clone()]).unwrap();
+    // mock_prover.assert_satisfied();
+    // info!("{}", "Mock prover passes".green().bold());
+    // generates halo2 solidity verifier
+    let vk = keygen_vk(kzg_param, &circuit).unwrap();
+    let pk = keygen_pk(kzg_param, vk.clone(), &circuit).unwrap();
+    info!("{}", "Starting generate checked proof".blue().bold());
+    let now = Instant::now();
+    // add blindness
+    let mut rng = rand::thread_rng();
+    let proof = create_proof_checked(kzg_param, &pk, circuit.clone(), &instances, &mut rng);
+    info!("{}", "SNARK proof generated successfully!".green().bold());
+    report_elapsed(now);
+
+    if let Some(save_path) = save {
+        // save verifier and vk as solidity smart contract
+        std_ops::save_snark_proof(format!("{}_snark_proof.json", save_path), &proof);
+    }
+
+    Ok(proof)
+}
+
+pub mod std_ops {
+    use std::io::Read;
     pub(crate) use std::{
-        fs::{create_dir_all, File},
+        fs::{create_dir_all, File, self},
         io::Write
     };
 
+    use anyhow::Result;
+
+    const DIR_GENERATED: &str = "./generated-sc";
+    const DIR_SNARKPROOF: &str = "./snark-proof";
+
     pub(crate) fn save_solidity(name: impl AsRef<str>, solidity: &str) {
-        const DIR_GENERATED: &str = "./generated-sc";
-    
         create_dir_all(DIR_GENERATED).unwrap();
         File::create(format!("{DIR_GENERATED}/{}", name.as_ref()))
             .unwrap()
             .write_all(solidity.as_bytes())
             .unwrap();
+    }
+
+    pub fn load_solidity(name: impl AsRef<str>) -> Result<String> {
+        let mut f = File::open(format!("{}/{}", DIR_GENERATED, name.as_ref()))?;
+        let mut buffer = String::new();
+        f.read_to_string(&mut buffer)?;
+        Ok(buffer)
+    }
+
+    pub(crate) fn save_snark_proof(name: impl AsRef<str>, proof: &Vec<u8>) {
+        let proof_json = serde_json::to_string(&proof).unwrap();
+        create_dir_all(DIR_SNARKPROOF).unwrap();
+        fs::write(format!("{}/{}", DIR_SNARKPROOF, name.as_ref()), proof_json).expect("Unable to write `snark proof` to file");
+    }
+
+    pub fn load_snark_proof(name: impl AsRef<str>) -> Result<Vec<u8>, serde_json::Error> {
+        let proof_json = fs::read(format!("{}/{}", DIR_SNARKPROOF, name.as_ref())).unwrap();
+        serde_json::from_slice(&proof_json)
     }
 }
 
