@@ -21,8 +21,8 @@ use halo2_solidity_verifier::SolidityGenerator;
 use log::info;
 use plonky2::field::goldilocks_field::GoldilocksField;
 
-fn report_elapsed(now: Instant) {
-    println!(
+pub fn report_elapsed(now: Instant) {
+    info!(
         "{}",
         format!("Took {} milliseconds", now.elapsed().as_millis())
             .blue()
@@ -152,10 +152,10 @@ pub fn verify_inside_snark_solidity(
     }
 }
 
-pub fn verify_inside_snark_proof(
+pub fn make_checked_fri2kzg_snark_proof(
     // degree: u32,
     proof: ProofTuple<GoldilocksField, Bn254PoseidonGoldilocksConfig, 2>, kzg_param: &ParamsKZG<Bn256>, save: Option<String>
-) -> Result<Vec<u8>> {
+) -> Result<(Vec<u8>, Vec<Fr>)> {
     let (proof_with_public_inputs, vd, cd) = proof;
     let proof = ProofValues::<Fr, 2>::from(proof_with_public_inputs.proof);
     let instances = proof_with_public_inputs
@@ -186,7 +186,7 @@ pub fn verify_inside_snark_proof(
         std_ops::save_snark_proof(format!("{}_snark_proof.json", save_path), &proof);
     }
 
-    Ok(proof)
+    Ok((proof, instances))
 }
 
 pub mod std_ops {
