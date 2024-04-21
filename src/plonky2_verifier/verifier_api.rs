@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use anyhow::Result;
+use itertools::Itertools;
 use super::bn245_poseidon::plonky2_config::Bn254PoseidonGoldilocksConfig;
 use super::types::{
     common_data::CommonData, proof::ProofValues, verification_key::VerificationKeyValues,
@@ -20,6 +21,7 @@ use halo2_solidity_verifier::Evm;
 use halo2_solidity_verifier::SolidityGenerator;
 use log::info;
 use plonky2::field::goldilocks_field::GoldilocksField;
+use plonky2::field::types::PrimeField64;
 
 pub fn report_elapsed(now: Instant) {
     info!(
@@ -184,6 +186,10 @@ pub fn make_checked_fri2kzg_snark_proof(
     if let Some(save_path) = save {
         // save verifier and vk as solidity smart contract
         std_ops::save_snark_proof(format!("{}_snark_proof.json", save_path), &proof);
+        let u64_instances = proof_with_public_inputs.public_inputs.iter().map(|ins| {
+            ins.to_canonical_u64().to_string()
+        }).collect_vec();
+        std_ops::save_snark_instances(format!("{}_snark_instances.json", save_path), &u64_instances);
     }
 
     Ok((proof, instances))
@@ -223,8 +229,19 @@ pub mod std_ops {
     }
 
     pub fn load_snark_proof(name: impl AsRef<str>) -> Result<Vec<u8>, serde_json::Error> {
-        let proof_json = fs::read(format!("{}/{}", DIR_SNARKPROOF, name.as_ref())).unwrap();
+        let proof_json = fs::read(format!("{}/{}", DIR_SNARKPROOF, name.as_ref())).expect(&format!("load proof {} error", name.as_ref()));
         serde_json::from_slice(&proof_json)
+    }
+
+    pub(crate) fn save_snark_instances(name: impl AsRef<str>, instances: &Vec<String>) {
+        let instances_json = serde_json::to_string(instances).expect(&format!("load instances {} error", name.as_ref()));
+        create_dir_all(DIR_SNARKPROOF).unwrap();
+        fs::write(format!("{}/{}", DIR_SNARKPROOF, name.as_ref()), instances_json).expect("Unable to write `snark instances` to file");
+    }
+
+    pub fn load_snark_instances(name: impl AsRef<str>) -> Result<Vec<String>, serde_json::Error> {
+        let instances_json = fs::read(format!("{}/{}", DIR_SNARKPROOF, name.as_ref())).unwrap();
+        serde_json::from_slice(&instances_json)
     }
 }
 

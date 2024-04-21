@@ -1152,7 +1152,7 @@ checksum = "8afb450f006bf6385ca15ef45d71d2288452bc3683ce2e2cacc0d18e4be60b58"
 
 [[package]]
 name = "plonky2"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1175,7 +1175,7 @@ dependencies = [
 
 [[package]]
 name = "plonky2_field"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "itertools 0.11.0",
