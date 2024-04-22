@@ -4,7 +4,7 @@ use crate::plonky2_verifier::context::RegionCtx;
 use itertools::Itertools;
 use plonky2::{
     field::types::Field64,
-    util::{bits_u64, ceil_div_usize},
+    util::bits_u64,
 };
 
 use crate::plonky2_verifier::{
@@ -33,7 +33,8 @@ impl ComparisonGateContainer {
     }
 
     pub fn chunk_bits(&self) -> usize {
-        ceil_div_usize(self.num_bits, self.num_chunks)
+        // ceil_div_usize(self.num_bits, self.num_chunks)
+        self.num_bits.div_ceil(self.num_chunks)
     }
 
     pub fn wire_first_input(&self) -> usize {

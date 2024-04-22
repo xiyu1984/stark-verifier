@@ -1,6 +1,6 @@
 use halo2_proofs::halo2curves::ff::PrimeField;
 use itertools::Itertools;
-use plonky2::util::ceil_div_usize;
+// use plonky2::util::ceil_div_usize;
 
 use crate::plonky2_verifier::{
     chip::goldilocks_chip::GoldilocksChipConfig, context::RegionCtx, types::assigned::AssignedExtensionFieldValue
@@ -44,10 +44,12 @@ impl U32AddManyGateConstrainer {
         2
     }
     pub fn num_result_limbs() -> usize {
-        ceil_div_usize(32, Self::limb_bits())
+        // ceil_div_usize(32, Self::limb_bits())
+        32usize.div_ceil(Self::limb_bits())
     }
     pub fn num_carry_limbs() -> usize {
-        ceil_div_usize(LOG2_MAX_NUM_ADDENDS, Self::limb_bits())
+        // ceil_div_usize(LOG2_MAX_NUM_ADDENDS, Self::limb_bits())
+        LOG2_MAX_NUM_ADDENDS.div_ceil(Self::limb_bits())
     }
     pub fn num_limbs() -> usize {
         Self::num_result_limbs() + Self::num_carry_limbs()
