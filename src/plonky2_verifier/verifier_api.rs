@@ -110,7 +110,7 @@ pub fn verify_inside_snark(
 pub fn verify_inside_snark_solidity(
     degree: u32,
     proof: ProofTuple<GoldilocksField, Bn254PoseidonGoldilocksConfig, 2>, kzg_param: &ParamsKZG<Bn256>, save: Option<String>
-) {
+) -> Result<(Vec<u8>, Vec<Fr>)> {
     let (proof_with_public_inputs, vd, cd) = proof;
     let proof = ProofValues::<Fr, 2>::from(proof_with_public_inputs.proof);
     let instances = proof_with_public_inputs
@@ -152,6 +152,8 @@ pub fn verify_inside_snark_solidity(
         std_ops::save_solidity(format!("{}_verifier.sol", save_path), &verifier_solidity);
         std_ops::save_solidity(format!("{}_vk.sol", save_path), &vk_solidity);
     }
+
+    Ok((proof, instances))
 }
 
 pub fn make_checked_fri2kzg_snark_proof(
