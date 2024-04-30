@@ -290,6 +290,30 @@ impl<F: PrimeField> From<&GateRef<GoldilocksField, 2>> for CustomGateRef<F> {
                     ],
                 }))
             },
+            "CosetInterpolationGate { subgroup_bits: 4, degree: 6, barycentric_weights: [17293822565076172801, 256, 1048576, 4294967296, 17592186044416, 72057594037927936, 68719476720, 281474976645120, 1152921504338411520, 18446744069414584065, 18446744069413535745, 18446744065119617025, 18446726477228539905, 18374686475376656385, 18446744000695107601, 18446462594437939201], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>" => {
+                Self(Box::new(CosetInterpolationGateConstrainer {
+                    subgroup_bits: 4,
+                    degree: 6,
+                    barycentric_weights: vec![
+                        GoldilocksField::from_canonical_u64(17293822565076172801), 
+                        GoldilocksField::from_canonical_u64(256), 
+                        GoldilocksField::from_canonical_u64(1048576), 
+                        GoldilocksField::from_canonical_u64(4294967296), 
+                        GoldilocksField::from_canonical_u64(17592186044416), 
+                        GoldilocksField::from_canonical_u64(72057594037927936), 
+                        GoldilocksField::from_canonical_u64(68719476720), 
+                        GoldilocksField::from_canonical_u64(281474976645120), 
+                        GoldilocksField::from_canonical_u64(1152921504338411520), 
+                        GoldilocksField::from_canonical_u64(18446744069414584065), 
+                        GoldilocksField::from_canonical_u64(18446744069413535745), 
+                        GoldilocksField::from_canonical_u64(18446744065119617025), 
+                        GoldilocksField::from_canonical_u64(18446726477228539905), 
+                        GoldilocksField::from_canonical_u64(18374686475376656385), 
+                        GoldilocksField::from_canonical_u64(18446744000695107601), 
+                        GoldilocksField::from_canonical_u64(18446462594437939201)
+                    ]
+                }))
+            },
             "U32AddManyGate { num_addends: 4, num_ops: 5, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }" => {
                 Self(Box::new(U32AddManyGateConstrainer {
                     num_addends: 4,
